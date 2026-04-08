@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"net/smtp"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -35,13 +37,18 @@ type EmailConfig struct {
 	To       string
 }
 
-var config = EmailConfig{
-	SMTPHost: "smtp.gmail.com",
-	SMTPPort: "587",
-	User:     "yangkr920208@gmail.com",
-	Password: "uevheoakvpjbxzfh",
-	From:     "yangkr920208@gmail.com",
-	To:       "yangkr920208@gmail.com",
+func loadConfig() EmailConfig {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file: ", err)
+	}
+	return EmailConfig{
+		SMTPHost: "smtp.gmail.com",
+		SMTPPort: "587",
+		User:     os.Getenv("SMTP_USER"),
+		Password: os.Getenv("SMTP_PASSWORD"),
+		From:     os.Getenv("SMTP_USER"),
+		To:       os.Getenv("EMAIL_TO"),
+	}
 }
 
 func newHTTPClient() *http.Client {
@@ -196,7 +203,7 @@ func sendEmail(cfg EmailConfig, subject, htmlBody string) error {
 }
 
 func main() {
-	cfg := config
+	cfg := loadConfig()
 	client := newHTTPClient()
 
 	since := time.Now().AddDate(0, 0, -7).Truncate(24 * time.Hour)
