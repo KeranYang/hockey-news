@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -30,7 +31,7 @@ type EmailConfig struct {
 	User     string
 	Password string
 	From     string
-	To       string
+	To       []string // comma-separated in .env: EMAIL_TO=a@x.com,b@x.com
 }
 
 func loadConfig() EmailConfig {
@@ -42,8 +43,8 @@ func loadConfig() EmailConfig {
 		SMTPPort: "587",
 		User:     os.Getenv("SMTP_USER"),
 		Password: os.Getenv("SMTP_PASSWORD"),
-		From:     os.Getenv("SMTP_USER"),
-		To:       os.Getenv("EMAIL_TO"),
+		From: os.Getenv("SMTP_USER"),
+		To:   strings.Split(os.Getenv("EMAIL_TO"), ","),
 	}
 }
 
@@ -122,10 +123,10 @@ func sendEmail(cfg EmailConfig, subject, htmlBody string) error {
 	auth := smtp.PlainAuth("", cfg.User, cfg.Password, cfg.SMTPHost)
 	header := fmt.Sprintf(
 		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n",
-		cfg.From, cfg.To, subject,
+		cfg.From, strings.Join(cfg.To, ", "), subject,
 	)
 	addr := cfg.SMTPHost + ":" + cfg.SMTPPort
-	return smtp.SendMail(addr, auth, cfg.From, []string{cfg.To}, []byte(header+htmlBody))
+	return smtp.SendMail(addr, auth, cfg.From, cfg.To, []byte(header+htmlBody))
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -159,7 +160,7 @@ func main() {
 	}
 
 	subject := fmt.Sprintf("Hockey U8 Weekly Digest — %s", time.Now().Format("Jan 2, 2006"))
-	log.Printf("Sending email to %s", cfg.To)
+	log.Printf("Sending email to %s", strings.Join(cfg.To, ", "))
 	if err := sendEmail(cfg, subject, htmlBody); err != nil {
 		log.Fatalf("Failed to send email: %v", err)
 	}
