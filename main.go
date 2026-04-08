@@ -81,6 +81,11 @@ var emailTmpl = template.Must(template.New("email").Parse(`<!DOCTYPE html>
 <body>
   <h1>Hockey Weekly Digest — {{.WeekOf}}</h1>
 
+  <p>
+    Your weekly hockey briefing, automatically assembled so you can spend less time doom-scrolling
+    club websites and more time finding Lucas's left glove. U8 news only — because nobody cares about the U18s.
+  </p>
+
   {{range .Sections}}
   <h2 class="site"><a href="{{.SiteURL}}">{{.Name}}</a></h2>
   {{if .Articles}}
