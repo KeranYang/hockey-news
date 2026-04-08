@@ -18,6 +18,8 @@ import (
 // and append an instance here.
 var scrapers = []Scraper{
 	&OakvilleRangersScraper{},
+	&CanlanOakvilleScraper{},
+	&OakvilleHockeyAcademyScraper{},
 }
 
 // ── Config ───────────────────────────────────────────────────────────────────
