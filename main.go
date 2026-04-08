@@ -44,8 +44,16 @@ func loadConfig() EmailConfig {
 		User:     os.Getenv("SMTP_USER"),
 		Password: os.Getenv("SMTP_PASSWORD"),
 		From: os.Getenv("SMTP_USER"),
-		To:   strings.Split(os.Getenv("EMAIL_TO"), ","),
+		To:   splitTrimmed(os.Getenv("EMAIL_TO"), ","),
 	}
+}
+
+func splitTrimmed(s, sep string) []string {
+	parts := strings.Split(s, sep)
+	for i, p := range parts {
+		parts[i] = strings.TrimSpace(p)
+	}
+	return parts
 }
 
 func newHTTPClient() *http.Client {
