@@ -64,6 +64,40 @@ func fetchWithUA(client *http.Client, url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
+// isRelevant returns true for articles that a parent of a U8 player should care about:
+//   - Explicitly about U7 or U8
+//   - About House League (the level U8 plays at)
+//   - General org-wide news (no specific older age group mentioned)
+func isRelevant(title string) bool {
+	upper := strings.ToUpper(title)
+
+	// Always include U7/U8 specific news
+	if strings.Contains(upper, "U8") || strings.Contains(upper, "U7") {
+		return true
+	}
+
+	// Include house league news
+	if strings.Contains(upper, "HOUSE LEAGUE") {
+		return true
+	}
+
+	// Include registration news
+	if strings.Contains(upper, "REGISTR") {
+		return true
+	}
+
+	// Exclude articles clearly targeting older age groups
+	olderGroups := []string{"U9", "U10", "U11", "U12", "U13", "U14", "U15", "U16", "U17", "U18", "AAA", "ADVANCED", "REP "}
+	for _, ag := range olderGroups {
+		if strings.Contains(upper, ag) {
+			return false
+		}
+	}
+
+	// No specific age group mentioned → general org news, include it
+	return true
+}
+
 // fetchArticleList scrapes the /Articles/ listing and returns articles published since `since`.
 func fetchArticleList(client *http.Client, since time.Time) ([]Article, error) {
 	resp, err := fetchWithUA(client, articlesURL)
@@ -95,6 +129,10 @@ func fetchArticleList(client *http.Client, since time.Time) ([]Article, error) {
 
 		// Only keep articles from within the requested window
 		if date.Before(since) {
+			return
+		}
+
+		if !isRelevant(title) {
 			return
 		}
 
@@ -149,8 +187,8 @@ var emailTmpl = template.Must(template.New("email").Parse(`<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>Oakville Rangers — Weekly News Digest</h1>
-  <p>Here are the latest updates from <a href="https://oakvillerangers.ca">oakvillerangers.ca</a> for the week of {{.WeekOf}}.</p>
+  <h1>Oakville Rangers U8 — Weekly News Digest</h1>
+  <p>Here are the latest U8 updates from <a href="https://oakvillerangers.ca">oakvillerangers.ca</a> for the week of {{.WeekOf}}.</p>
 
   {{if .Articles}}
     {{range .Articles}}
@@ -227,7 +265,7 @@ func main() {
 		log.Fatalf("Failed to build email: %v", err)
 	}
 
-	subject := fmt.Sprintf("Oakville Rangers Weekly Digest — %s", time.Now().Format("Jan 2, 2006"))
+	subject := fmt.Sprintf("Oakville Rangers U8 Weekly Digest — %s", time.Now().Format("Jan 2, 2006"))
 	log.Printf("Sending email to %s", cfg.To)
 	if err := sendEmail(cfg, subject, htmlBody); err != nil {
 		log.Fatalf("Failed to send email: %v", err)
