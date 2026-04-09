@@ -1,0 +1,28 @@
+name: Weekly Hockey Digest
+
+on:
+  schedule:
+    # Every Monday at 8:00am Eastern (12:00 UTC in summer / 13:00 UTC in winter).
+    # Adjust the hour if emails arrive an hour off after daylight saving changes.
+    - cron: '0 12 * * 1'
+  workflow_dispatch: # allows manual trigger from the GitHub Actions UI
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build -o hockey-news .
+
+      - name: Send digest
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: ./hockey-news

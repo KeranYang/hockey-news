@@ -35,7 +35,9 @@ type EmailConfig struct {
 }
 
 func loadConfig() EmailConfig {
-	if err := godotenv.Load(); err != nil {
+	// In CI, variables are injected via secrets so a missing .env is fine.
+	// Locally, require the file so misconfiguration is caught early.
+	if err := godotenv.Load(); err != nil && os.Getenv("CI") == "" {
 		log.Fatal("Error loading .env file: ", err)
 	}
 	return EmailConfig{
