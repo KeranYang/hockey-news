@@ -131,6 +131,8 @@ func (s *OakvilleHockeyAcademyScraper) FetchArticles(client *http.Client, since 
 }
 
 // parseSitemap fetches an XML sitemap and returns (url, lastmod) pairs.
+// The *http.Client is unused — this site blocks Go's HTTP client via TLS
+// fingerprinting, so curlFetch is used instead throughout this file.
 func (s *OakvilleHockeyAcademyScraper) parseSitemap(_ *http.Client, sitemapURL string) ([]struct{ url, lastmod string }, error) {
 	body, err := curlFetch(sitemapURL, "Accept: application/xml, text/xml, */*")
 	if err != nil {
@@ -158,6 +160,7 @@ func (s *OakvilleHockeyAcademyScraper) parseSitemap(_ *http.Client, sitemapURL s
 }
 
 // fetchMeta fetches og:title and og:description from an individual page.
+// See parseSitemap for why *http.Client is unused.
 func (s *OakvilleHockeyAcademyScraper) fetchMeta(_ *http.Client, pageURL string) (title, summary string, err error) {
 	body, err := curlFetch(pageURL)
 	if err != nil {

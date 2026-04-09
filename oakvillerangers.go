@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -55,9 +56,10 @@ func (s *OakvilleRangersScraper) FetchArticles(client *http.Client, since time.T
 			Date:   date,
 		}
 
-		// Fetch the og:description from the article page as the summary
+		// Fetch the og:description from the article page as the summary.
+		// Non-fatal: the article is still included without a summary on failure.
 		if err := s.fetchSummary(client, &article); err != nil {
-			// Non-fatal: article is still included without a summary
+			log.Printf("Warning: could not fetch summary for %q: %v", article.URL, err)
 		}
 
 		articles = append(articles, article)

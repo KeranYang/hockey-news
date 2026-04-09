@@ -57,9 +57,15 @@ func isRelevant(title string) bool {
 		return true
 	}
 
-	// Exclude articles clearly targeting older age groups
-	for _, ag := range []string{"U9", "U10", "U11", "U12", "U13", "U14", "U15", "U16", "U17", "U18", "AAA", "ADVANCED", "REP "} {
+	// Exclude articles clearly targeting older age groups.
+	// "REP" is matched as a whole word to avoid false positives (e.g. "report").
+	for _, ag := range []string{"U9", "U10", "U11", "U12", "U13", "U14", "U15", "U16", "U17", "U18", "AAA", "ADVANCED"} {
 		if strings.Contains(upper, ag) {
+			return false
+		}
+	}
+	for _, w := range strings.Fields(upper) {
+		if w == "REP" {
 			return false
 		}
 	}
