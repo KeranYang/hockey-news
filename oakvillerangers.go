@@ -45,7 +45,7 @@ func (s *OakvilleRangersScraper) FetchArticles(client *http.Client, since time.T
 			return
 		}
 
-		if date.Before(since) || !isRelevant(title) {
+		if date.Before(since) || !isRelevant(title, "") {
 			return
 		}
 

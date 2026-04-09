@@ -114,7 +114,7 @@ func (s *OakvilleHockeyAcademyScraper) FetchArticles(client *http.Client, since 
 			continue
 		}
 
-		if !isRelevant(title) {
+		if !isRelevant(title, summary) {
 			continue
 		}
 

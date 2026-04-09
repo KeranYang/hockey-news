@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -39,37 +38,3 @@ func fetchWithUA(client *http.Client, url string) (*http.Response, error) {
 	return client.Do(req)
 }
 
-// isRelevant returns true for articles relevant to a parent of a U8 (age 7) player:
-//   - Explicitly mentions U7 or U8
-//   - Mentions House League (the level U8 plays at)
-//   - Mentions registration
-//   - General org-wide news (no older age group mentioned)
-func isRelevant(title string) bool {
-	upper := strings.ToUpper(title)
-
-	if strings.Contains(upper, "U8") || strings.Contains(upper, "U7") {
-		return true
-	}
-	if strings.Contains(upper, "HOUSE LEAGUE") {
-		return true
-	}
-	if strings.Contains(upper, "REGISTR") {
-		return true
-	}
-
-	// Exclude articles clearly targeting older age groups.
-	// "REP" is matched as a whole word to avoid false positives (e.g. "report").
-	for _, ag := range []string{"U9", "U10", "U11", "U12", "U13", "U14", "U15", "U16", "U17", "U18", "AAA", "ADVANCED"} {
-		if strings.Contains(upper, ag) {
-			return false
-		}
-	}
-	for _, w := range strings.Fields(upper) {
-		if w == "REP" {
-			return false
-		}
-	}
-
-	// No specific age group → general org news
-	return true
-}

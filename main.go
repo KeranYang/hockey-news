@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/joho/godotenv"
 )
 
@@ -148,6 +149,8 @@ func sendEmail(cfg EmailConfig, subject, htmlBody string) error {
 
 func main() {
 	cfg := loadConfig()
+	ac := anthropic.NewClient()
+	anthropicClient = &ac
 	client := newHTTPClient()
 	since := time.Now().AddDate(0, 0, -7).Truncate(24 * time.Hour)
 

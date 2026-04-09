@@ -48,7 +48,7 @@ func (s *CanlanOakvilleScraper) FetchArticles(client *http.Client, since time.Ti
 			return
 		}
 
-		if date.Before(since) || !isRelevant(title) {
+		if date.Before(since) {
 			return
 		}
 
@@ -59,6 +59,10 @@ func (s *CanlanOakvilleScraper) FetchArticles(client *http.Client, since time.Ti
 				summary = strings.TrimSpace(p.Text())
 			}
 		})
+
+		if !isRelevant(title, summary) {
+			return
+		}
 
 		articles = append(articles, Article{
 			Source:  s.Name(),
