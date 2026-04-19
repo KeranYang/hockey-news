@@ -46,8 +46,8 @@ func loadConfig() EmailConfig {
 		SMTPPort: "587",
 		User:     os.Getenv("SMTP_USER"),
 		Password: os.Getenv("SMTP_PASSWORD"),
-		From: os.Getenv("SMTP_USER"),
-		To:   splitTrimmed(os.Getenv("EMAIL_TO"), ","),
+		From:     os.Getenv("SMTP_USER"),
+		To:       splitTrimmed(os.Getenv("EMAIL_TO"), ","),
 	}
 }
 
@@ -65,71 +65,45 @@ func newHTTPClient() *http.Client {
 
 // ── Email ────────────────────────────────────────────────────────────────────
 
-type SiteSection struct {
-	Name     string
-	SiteURL  string
-	Articles []Article
-}
-
-var emailTmpl = template.Must(template.New("email").Parse(`<!DOCTYPE html>
+var alertTmpl = template.Must(template.New("alert").Parse(`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
     body { font-family: Arial, sans-serif; color: #333; max-width: 700px; margin: 0 auto; padding: 20px; }
     h1 { color: #00508A; border-bottom: 3px solid #C22033; padding-bottom: 10px; }
-    h2.site { color: #C22033; margin-top: 32px; font-size: 20px; }
     .article { margin-bottom: 24px; border-left: 4px solid #00508A; padding-left: 14px; }
     .article h3 { margin: 0 0 4px 0; font-size: 16px; }
     .article h3 a { color: #00508A; text-decoration: none; }
     .article h3 a:hover { text-decoration: underline; }
     .article .meta { color: #888; font-size: 13px; margin-bottom: 6px; }
     .article p { margin: 0; line-height: 1.6; }
-    .empty { color: #888; font-style: italic; }
     .footer { margin-top: 40px; font-size: 12px; color: #aaa; border-top: 1px solid #eee; padding-top: 12px; }
   </style>
 </head>
 <body>
-  <h1>Hockey Weekly Digest — {{.WeekOf}}</h1>
+  <h1>Hockey News Alert</h1>
+  <p>New U8-relevant articles just posted — register early, spots fill fast!</p>
 
-  <p>
-    Your weekly hockey briefing, automatically assembled so you can spend less time doom-scrolling
-    club websites and more time finding Lucas's left glove. U8 news only — because nobody cares about the U18s.
-  </p>
-
-  {{range .Sections}}
-  <h2 class="site"><a href="{{.SiteURL}}">{{.Name}}</a></h2>
-  {{if .Articles}}
-    {{range .Articles}}
-    <div class="article">
-      <h3><a href="{{.URL}}">{{.Title}}</a></h3>
-      <div class="meta">{{.Date.Format "January 2, 2006"}}</div>
-      {{if .Summary}}<p>{{.Summary}}</p>{{end}}
-    </div>
-    {{end}}
-  {{else}}
-    <p class="empty">No relevant articles this week.</p>
-  {{end}}
+  {{range .Articles}}
+  <div class="article">
+    <h3><a href="{{.URL}}">{{.Title}}</a></h3>
+    <div class="meta">{{.Source}} &middot; {{.Date.Format "January 2, 2006"}}</div>
+    {{if .Summary}}<p>{{.Summary}}</p>{{end}}
+  </div>
   {{end}}
 
   <div class="footer">
-    This digest was automatically generated for a U8 hockey parent.
+    Automated hockey news monitor &mdash; checks every 15 minutes.
   </div>
 </body>
 </html>
 `))
 
-func buildEmailHTML(sections []SiteSection) (string, error) {
-	data := struct {
-		WeekOf   string
-		Sections []SiteSection
-	}{
-		WeekOf:   time.Now().AddDate(0, 0, -7).Format("January 2") + " – " + time.Now().Format("January 2, 2006"),
-		Sections: sections,
-	}
-
+func buildAlertEmail(articles []Article) (string, error) {
+	data := struct{ Articles []Article }{Articles: articles}
 	var buf bytes.Buffer
-	if err := emailTmpl.Execute(&buf, data); err != nil {
+	if err := alertTmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
@@ -154,34 +128,52 @@ func main() {
 	client := newHTTPClient()
 	since := time.Now().AddDate(0, 0, -7).Truncate(24 * time.Hour)
 
+	seen := loadSeen()
+
 	log.Printf("Fetching articles since %s", since.Format("2006-01-02"))
 
-	var sections []SiteSection
+	var newArticles []Article
 	for _, s := range scrapers {
 		log.Printf("Scraping %s...", s.Name())
 		articles, err := s.FetchArticles(client, since)
 		if err != nil {
 			log.Printf("Warning: failed to scrape %s: %v", s.Name(), err)
-			articles = nil
+			continue
 		}
-		log.Printf("  → %d relevant articles", len(articles))
-		sections = append(sections, SiteSection{
-			Name:     s.Name(),
-			SiteURL:  s.SiteURL(),
-			Articles: articles,
-		})
+		for _, a := range articles {
+			if seen[a.URL] {
+				continue
+			}
+			seen[a.URL] = true
+			if isRelevant(a.Title, a.Summary) {
+				newArticles = append(newArticles, a)
+			}
+		}
 	}
 
-	htmlBody, err := buildEmailHTML(sections)
+	saveSeen(seen)
+
+	if len(newArticles) == 0 {
+		log.Println("No new relevant articles found.")
+		return
+	}
+
+	log.Printf("Found %d new relevant article(s) — sending alert", len(newArticles))
+
+	htmlBody, err := buildAlertEmail(newArticles)
 	if err != nil {
 		log.Fatalf("Failed to build email: %v", err)
 	}
 
-	subject := fmt.Sprintf("Hockey U8 Weekly Digest — %s", time.Now().Format("Jan 2, 2006"))
-	log.Printf("Sending email to %s", strings.Join(cfg.To, ", "))
+	subject := fmt.Sprintf("Hockey Alert: %d new article(s) — %s", len(newArticles), time.Now().Format("Jan 2, 2006"))
+	if len(newArticles) == 1 {
+		subject = fmt.Sprintf("Hockey Alert: %s", newArticles[0].Title)
+	}
+
+	log.Printf("Sending alert to %s", strings.Join(cfg.To, ", "))
 	if err := sendEmail(cfg, subject, htmlBody); err != nil {
 		log.Fatalf("Failed to send email: %v", err)
 	}
 
-	log.Println("Email sent successfully!")
+	log.Println("Alert sent successfully!")
 }
