@@ -2,7 +2,7 @@ name: Hockey News Monitor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '0 12 * * 1'
   workflow_dispatch: # allows manual trigger from the GitHub Actions UI
 
 jobs:
