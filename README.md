@@ -1,11 +1,15 @@
 # hockey-news
 
-A Go script that scrapes weekly news from Oakville hockey sites and emails a U8-focused digest every Monday morning.
+A Go tool that monitors Oakville hockey sites hourly and sends an email the moment new U8-relevant content appears — so Lucas stays on the ice and off the waitlist.
 
 **Sites monitored:**
 - [Oakville Rangers](https://oakvillerangers.ca)
 - [Canlan Sports Oakville](https://www.canlansports.com/locations/ca/on/oakville/)
 - [Oakville Hockey Academy](https://oakvillehockeyacademy.com)
+
+## How it works
+
+Every hour, the tool scrapes the three sites above and checks for articles published in the last 7 days. Each new article is run through Claude (Haiku) to filter for U8 relevance. If anything new and relevant is found, an email goes out immediately. Already-seen articles are tracked in `seen.json` so you never get the same article twice.
 
 ## Setup
 
@@ -29,9 +33,11 @@ Create a `.env` file in the project root:
 SMTP_USER=you@gmail.com
 SMTP_PASSWORD=your-gmail-app-password
 EMAIL_TO=you@gmail.com,someone@example.com
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-`SMTP_PASSWORD` must be a [Gmail App Password](https://myaccount.google.com/apppasswords), not your regular Gmail password.
+`SMTP_PASSWORD` must be a [Gmail App Password](https://myaccount.google.com/apppasswords), not your regular Gmail password. Generate one at myaccount.google.com → Security → 2-Step Verification → App passwords.
+
 `EMAIL_TO` accepts one or more comma-separated addresses.
 
 ### 4. Run manually
@@ -40,25 +46,50 @@ EMAIL_TO=you@gmail.com,someone@example.com
 go run .
 ```
 
-### 5. Schedule weekly (every Monday at 8am)
+The first run will treat everything from the last 7 days as new and send one email. After that, only genuinely new articles trigger an alert.
 
-Build a binary first:
+## GitHub Actions (automated)
 
-```bash
-go build -o hockey-news .
-```
+The workflow runs every hour via GitHub Actions — free for public repositories. Seen articles are persisted between runs using GitHub Actions cache.
 
-Then add to your crontab (`crontab -e`):
+To deploy, push to GitHub and add the following repository secrets:
 
-```cron
-0 8 * * 1 cd /path/to/hockey-news && ./hockey-news >> /tmp/hockey-news.log 2>&1
-```
+| Secret | Description |
+|---|---|
+| `SMTP_USER` | Your Gmail address |
+| `SMTP_PASSWORD` | Gmail App Password |
+| `EMAIL_TO` | Recipient address(es) |
+| `ANTHROPIC_API_KEY` | Anthropic API key |
 
-Check the log after the first run:
+You can also trigger a run manually from the Actions tab.
 
-```bash
-cat /tmp/hockey-news.log
-```
+## Sample email
+
+**Subject:** `just posted: U8 Winter House League Registration is Open`
+
+---
+
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td>
+<div style="font-family:Arial,sans-serif;color:#333;max-width:700px;padding:20px">
+  <h2 style="color:#00508A;border-bottom:3px solid #C22033;padding-bottom:10px">What's new at the rink</h2>
+  <p>These just went up in the last hour across the Oakville hockey sites — figured you'd want to know sooner rather than later. Lucas probably just wants to know if there's ice time, but here we are.</p>
+  <div style="margin-bottom:24px;border-left:4px solid #00508A;padding-left:14px">
+    <h3 style="margin:0 0 4px 0;font-size:16px"><a href="#" style="color:#00508A;text-decoration:none">U8 Winter House League Registration is Open</a></h3>
+    <div style="color:#888;font-size:13px;margin-bottom:6px">Oakville Rangers · April 19, 2026</div>
+    <p style="margin:0;line-height:1.6">Registration for the U8 Winter House League is now open. Sessions run Saturday mornings at Sixteen Mile Sports Complex starting November 2. Spots are limited to 80 players across four teams.</p>
+  </div>
+  <div style="margin-bottom:24px;border-left:4px solid #00508A;padding-left:14px">
+    <h3 style="margin:0 0 4px 0;font-size:16px"><a href="#" style="color:#00508A;text-decoration:none">Learn to Skate Program — Fall Session Announced</a></h3>
+    <div style="color:#888;font-size:13px;margin-bottom:6px">Oakville Hockey Academy · April 19, 2026</div>
+    <p style="margin:0;line-height:1.6">The fall Learn to Skate program is back, designed for young players looking to build confidence on the ice. Open to ages 4–8, with beginner and intermediate streams available.</p>
+  </div>
+  <div style="margin-top:40px;font-size:12px;color:#aaa;border-top:1px solid #eee;padding-top:12px">
+    HockeyNews — built by Keran Yang to keep Lucas on the ice and off the waitlist. © 2026.
+  </div>
+</div>
+</td></tr></table>
+
+---
 
 ## Adding a new site
 

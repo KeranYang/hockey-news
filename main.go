@@ -82,8 +82,11 @@ var alertTmpl = template.Must(template.New("alert").Parse(`<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h1>Hockey News Alert</h1>
-  <p>New U8-relevant articles just posted — register early, spots fill fast!</p>
+  <h1>What's new at the rink</h1>
+  <p>
+    These just went up in the last hour across the Oakville hockey sites — figured you'd want to know sooner rather than later.
+    Lucas probably just wants to know if there's ice time, but here we are.
+  </p>
 
   {{range .Articles}}
   <div class="article">
@@ -94,7 +97,7 @@ var alertTmpl = template.Must(template.New("alert").Parse(`<!DOCTYPE html>
   {{end}}
 
   <div class="footer">
-    Automated hockey news monitor &mdash; checks every 15 minutes.
+    HockeyNews &mdash; built by Keran Yang to keep Lucas on the ice and off the waitlist. &copy; 2026.
   </div>
 </body>
 </html>
@@ -165,9 +168,9 @@ func main() {
 		log.Fatalf("Failed to build email: %v", err)
 	}
 
-	subject := fmt.Sprintf("Hockey Alert: %d new article(s) — %s", len(newArticles), time.Now().Format("Jan 2, 2006"))
+	subject := fmt.Sprintf("just posted: %d new hockey article(s) in the last hour", len(newArticles))
 	if len(newArticles) == 1 {
-		subject = fmt.Sprintf("Hockey Alert: %s", newArticles[0].Title)
+		subject = fmt.Sprintf("just posted: %s", newArticles[0].Title)
 	}
 
 	log.Printf("Sending alert to %s", strings.Join(cfg.To, ", "))
