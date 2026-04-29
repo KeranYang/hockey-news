@@ -36,6 +36,7 @@ jobs:
         run: ./hockey-news
 
       - name: Save seen articles cache
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: seen.json

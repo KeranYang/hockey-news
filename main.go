@@ -136,11 +136,13 @@ func main() {
 	log.Printf("Fetching articles since %s", since.Format("2006-01-02"))
 
 	var newArticles []Article
+	var failed []string
 	for _, s := range scrapers {
 		log.Printf("Scraping %s...", s.Name())
 		articles, err := s.FetchArticles(client, since)
 		if err != nil {
-			log.Printf("Warning: failed to scrape %s: %v", s.Name(), err)
+			log.Printf("Error: failed to scrape %s: %v", s.Name(), err)
+			failed = append(failed, s.Name())
 			continue
 		}
 		for _, a := range articles {
@@ -153,6 +155,10 @@ func main() {
 	}
 
 	saveSeen(seen)
+
+	if len(failed) > 0 {
+		log.Fatalf("Scraping failed for: %s", strings.Join(failed, ", "))
+	}
 
 	if len(newArticles) == 0 {
 		log.Println("No new relevant articles found.")
