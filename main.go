@@ -128,7 +128,7 @@ func main() {
 	cfg := loadConfig()
 	ac := anthropic.NewClient()
 	anthropicClient = &ac
-	client := newHTTPClient()
+	httpClient = newHTTPClient()
 	since := time.Now().AddDate(0, 0, -7).Truncate(24 * time.Hour)
 
 	seen := loadSeen()
@@ -139,11 +139,10 @@ func main() {
 	var failed []string
 	for _, s := range scrapers {
 		log.Printf("Scraping %s...", s.Name())
-		articles, err := s.FetchArticles(client, since)
+		articles, err := fetchArticles(s, since)
 		if err != nil {
-			log.Printf("Error: failed to scrape %s: %v", s.Name(), err)
+			log.Printf("Error: %s: %v", s.Name(), err)
 			failed = append(failed, s.Name())
-			continue
 		}
 		for _, a := range articles {
 			if seen[a.URL] {

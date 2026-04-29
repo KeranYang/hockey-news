@@ -3,43 +3,27 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"os/exec"
-	"time"
 )
-
-var ohaPages = []string{
-	"https://oakvillehockeyacademy.com/camps/",
-	"https://oakvillehockeyacademy.com/leagues/",
-	"https://oakvillehockeyacademy.com/programs/",
-}
 
 type OakvilleHockeyAcademyScraper struct{}
 
 func (s *OakvilleHockeyAcademyScraper) Name() string    { return "Oakville Hockey Academy" }
 func (s *OakvilleHockeyAcademyScraper) SiteURL() string { return "https://oakvillehockeyacademy.com" }
-
-func (s *OakvilleHockeyAcademyScraper) FetchArticles(client *http.Client, since time.Time) ([]Article, error) {
-	var all []Article
-	for _, pageURL := range ohaPages {
-		body, err := curlFetch(pageURL)
-		if err != nil {
-			log.Printf("Warning: skipping %s: %v", pageURL, err)
-			continue
-		}
-		articles, err := extractArticles(client, body, s.SiteURL(), s.Name(), since)
-		if err != nil {
-			log.Printf("Warning: extracting from %s: %v", pageURL, err)
-			continue
-		}
-		all = append(all, articles...)
+func (s *OakvilleHockeyAcademyScraper) PageURLs() []string {
+	return []string{
+		"https://oakvillehockeyacademy.com/camps/",
+		"https://oakvillehockeyacademy.com/leagues/",
+		"https://oakvillehockeyacademy.com/programs/",
 	}
-	return all, nil
 }
 
-// curlBin returns the path to curl, preferring the user's PATH.
+// FetchPage uses curl to bypass Cloudflare TLS fingerprinting, which blocks Go's HTTP client.
+func (s *OakvilleHockeyAcademyScraper) FetchPage(url string) ([]byte, error) {
+	return curlFetch(url)
+}
+
 func curlBin() (string, error) {
 	if bin, err := exec.LookPath("curl"); err == nil {
 		return bin, nil
@@ -52,8 +36,6 @@ func curlBin() (string, error) {
 	return "", fmt.Errorf("curl not found")
 }
 
-// curlFetch uses the system curl to bypass Cloudflare TLS fingerprinting.
-// oakvillehockeyacademy.com blocks Go's HTTP client via TLS fingerprinting.
 func curlFetch(url string, extraHeaders ...string) ([]byte, error) {
 	bin, err := curlBin()
 	if err != nil {
