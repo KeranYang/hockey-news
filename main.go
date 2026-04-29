@@ -148,9 +148,7 @@ func main() {
 				continue
 			}
 			seen[a.URL] = true
-			if isRelevant(a.Title, a.Summary) {
-				newArticles = append(newArticles, a)
-			}
+			newArticles = append(newArticles, a)
 		}
 	}
 

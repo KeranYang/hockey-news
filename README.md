@@ -9,7 +9,9 @@ A Go tool that monitors Oakville hockey sites hourly and sends an email the mome
 
 ## How it works
 
-Every hour, the tool scrapes the three sites above and checks for articles published in the last 7 days. Each new article is run through Claude (Haiku) to filter for U8 relevance. If anything new and relevant is found, an email goes out immediately. Already-seen articles are tracked in `seen.json` so you never get the same article twice.
+Every hour, the tool fetches the news/listing pages from each site and passes the raw HTML to Claude Haiku, which extracts articles and filters for U8 relevance in a single call. Each returned URL is verified with a HEAD request to catch hallucinated links. If anything new and relevant is found, an email goes out immediately. Already-seen articles are tracked in `seen.json` so you never get the same article twice.
+
+Because extraction is LLM-based rather than CSS-selector-based, the scraper stays functional even when sites redesign their layouts.
 
 ## Setup
 
@@ -97,4 +99,5 @@ You can also trigger a run manually from the Actions tab.
    - `Name() string`
    - `SiteURL() string`
    - `FetchArticles(client *http.Client, since time.Time) ([]Article, error)`
-2. Register it in `main.go` by appending an instance to the `scrapers` slice.
+2. Inside `FetchArticles`, fetch the site's news or listing page, then pass the HTML body to `extractArticles(client, body, siteURL, name, since)` — that handles LLM extraction, relevance filtering, and URL validation.
+3. Register it in `main.go` by appending an instance to the `scrapers` slice.
