@@ -132,6 +132,7 @@ func main() {
 	since := time.Now().AddDate(0, 0, -7).Truncate(24 * time.Hour)
 
 	seen := loadSeen()
+	pageHashes = loadPageHashes()
 
 	log.Printf("Fetching articles since %s", since.Format("2006-01-02"))
 
@@ -154,6 +155,7 @@ func main() {
 	}
 
 	saveSeen(seen)
+	savePageHashes(pageHashes)
 
 	if len(failed) > 0 {
 		log.Fatalf("Scraping failed for: %s", strings.Join(failed, ", "))

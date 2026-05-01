@@ -2,7 +2,7 @@ name: Hockey News Monitor
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '0 8 * * *'
   workflow_dispatch: # allows manual trigger from the GitHub Actions UI
 
 jobs:
@@ -15,13 +15,15 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Restore seen articles cache
+      - name: Restore cache
         uses: actions/cache/restore@v4
         with:
-          path: seen.json
-          key: seen-articles-${{ github.run_id }}
+          path: |
+            seen.json
+            page_hashes.json
+          key: hockey-news-${{ github.run_id }}
           restore-keys: |
-            seen-articles-
+            hockey-news-
 
       - name: Build
         run: go build -o hockey-news .
@@ -35,9 +37,11 @@ jobs:
           CI: true
         run: ./hockey-news
 
-      - name: Save seen articles cache
+      - name: Save cache
         if: always()
         uses: actions/cache/save@v4
         with:
-          path: seen.json
-          key: seen-articles-${{ github.run_id }}
+          path: |
+            seen.json
+            page_hashes.json
+          key: hockey-news-${{ github.run_id }}

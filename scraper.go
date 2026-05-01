@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log"
@@ -22,6 +23,9 @@ type Article struct {
 
 // httpClient is the shared HTTP client, initialised in main.
 var httpClient *http.Client
+
+// pageHashes maps page URLs to the SHA256 of their last-seen stripped HTML.
+var pageHashes map[string]string
 
 // Scraper is the interface every site must implement.
 // PageURLs returns the listing/news pages to watch.
@@ -74,12 +78,19 @@ func fetchArticles(s Scraper, since time.Time) ([]Article, error) {
 			failedURLs = append(failedURLs, pageURL)
 			continue
 		}
+		stripped := stripNonContent(string(body))
+		hash := fmt.Sprintf("%x", sha256.Sum256([]byte(stripped)))
+		if pageHashes[pageURL] == hash {
+			log.Printf("%s: %s unchanged, skipping LLM", s.Name(), pageURL)
+			continue
+		}
 		articles, err := extractArticles(httpClient, body, s.SiteURL(), s.Name(), since)
 		if err != nil {
 			log.Printf("Error: %s: extracting from %s: %v", s.Name(), pageURL, err)
 			failedURLs = append(failedURLs, pageURL)
 			continue
 		}
+		pageHashes[pageURL] = hash
 		all = append(all, articles...)
 	}
 	if len(failedURLs) > 0 {
